@@ -1,0 +1,107 @@
+from typing import Optional, Tuple, Any, SupportsFloat, Dict, List
+
+import gymnasium as gym
+import numpy as np
+from gymnasium import spaces
+
+from udacity.ase_simulation.action import UdacityAction
+from udacity.ase_simulation.logger import CustomLogger
+from udacity.ase_simulation.observation import UdacityObservation
+
+
+class UdacityGym(gym.Env):
+    """
+    Gym interface for udacity simulator
+    """
+
+    metadata = {
+        "render.modes": ["human", "rgb_array"],
+    }
+
+    def __init__(
+            self,
+            simulator,
+            max_steering: float = 1.0,
+            max_throttle: float = 1.0,
+            input_shape: Tuple[int, int, int] = (3, 160, 320),
+    ):
+        # Save object properties and parameters
+        self.simulator = simulator
+
+        self.max_steering = max_steering
+        self.max_throttle = max_throttle
+        self.input_shape = input_shape
+
+        self.logger = CustomLogger(str(self.__class__))
+
+        # Initialize the gym environment
+        # steering + throttle, action space must be symmetric
+
+        # continuous action space under Reinforcement learning
+        # all possible actions that one can take
+        self.action_space = spaces.Box(
+            low=np.array([-max_steering, -max_throttle]), #minimum value of the action
+            high=np.array([max_steering, max_throttle]), #maximum value of the action
+            dtype=np.float32, # data type
+        )
+
+        # continuous observation_space under Reinforcement learning
+        # represent the way that one perceives the environment
+        self.observation_space = spaces.Box(
+            # image data with pixel values between 0 and 255
+            # 3: color channels; 160*320: pixel dimentions; standard image date type
+            low=0, high=255, shape=input_shape, dtype=np.uint8
+        )
+
+    def step(
+            self,
+            action: UdacityAction
+    ) -> tuple[Any, Any, bool, bool, dict[str, Any], dict[str, Any]]:
+        """
+        :param action: (np.ndarray)
+        :return: (np.ndarray, float, bool, dict)
+        """
+        # action[0] is the steering angle
+        # action[1] is the throttle
+
+        observation = self.simulator.step(action)
+
+        # TODO: fix the two Falses
+        # cte: Cross Track Error
+
+        crash = {
+            "out_of_track": self.simulator.sim_state['out_of_track'],
+            "collision": self.simulator.sim_state['collision'],
+            "low_speed": self.simulator.sim_state['low_speed'],
+            "is_crashed": self.simulator.sim_state['is_crashed']
+        }
+
+        return observation, observation.cte, False, False, crash, {
+            'events': self.simulator.sim_state['events'],
+            'episode_metrics': self.simulator.sim_state['episode_metrics'],
+        }
+
+    # insitial state of th env, in the beginning of each testing
+    def reset(self, **kwargs) -> tuple[UdacityObservation, dict[str, Any]]:
+
+        # TODO: make reset synchronous
+        # Returns only when the track has been set
+
+        track = kwargs['track'] if 'track' in kwargs.keys() else 'lake'
+        weather = kwargs['weather'] if 'weather' in kwargs.keys() else 'sunny'
+        daytime = kwargs['daytime'] if 'daytime' in kwargs.keys() else 'day'
+        observation, info = self.simulator.reset(track, weather, daytime)
+        return observation, info
+
+    def render(self, mode: str = "human") -> Optional[np.ndarray]:
+        if mode == "rgb_array":
+            return self.simulator.sim_state['observation'].image_array
+        return None
+
+    def observe(self) -> UdacityObservation:
+        self.simulator.sim_state['done'] = self.simulator.is_crash_limit()
+        return self.simulator.observe()
+
+    def close(self) -> None:
+        if self.simulator is not None:
+            self.simulator.close()

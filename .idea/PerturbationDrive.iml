@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/output_logs/model_nominal" />
+      <excludeFolder url="file://$MODULE_DIR$/output_logs/model_tracks_nominal" />
+      <excludeFolder url="file://$MODULE_DIR$/output_logs/test_nominal_original" />
+      <excludeFolder url="file://$MODULE_DIR$/output_logs/test_nominal_original_10roads" />
+      <excludeFolder url="file://$MODULE_DIR$/output_logs/test_nominal_original_extended3_extended5" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_road_generator/__MACOSX/udacity_sim_linux_Data/MonoBleedingEdge/x86_64" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_road_generator/udacity_sim_linux_Data/MonoBleedingEdge/x86_64" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_tracks/udacity_Data/MonoBleedingEdge/x86_64" />
+      <excludeFolder url="file://$MODULE_DIR$/output_logs" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_road_generator" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_tracks" />
+    </content>
+    <orderEntry type="jdk" jdkName="perturb-env" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="format" value="GOOGLE" />
+    <option name="myDocStringFormat" value="Google" />
+  </component>
+</module>
