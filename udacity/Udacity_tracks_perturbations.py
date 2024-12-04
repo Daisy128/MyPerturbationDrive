@@ -8,6 +8,7 @@ import sys
 import time
 import numpy as np
 from udacity.perturbation.imageperturbations import ImagePerturbation
+from udacity.perturbation.perturbationdrive import PerturbationDrive
 from perturbationdrive import ImageCallBack
 from udacity.ase_simulation.agent import SupervisedAgent
 from udacity.ase_simulation.gym import UdacityGym
@@ -18,16 +19,6 @@ sys.path.append(project_root)
 
 def create_perturb_list(perturbation_functions, image_size):
     return ImagePerturbation(funcs=perturbation_functions, attention_map={}, image_size=image_size)
-
-def perturb_driving_log(log_path, row_data, file_exists):
-
-    with open(log_path, mode='a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        if not file_exists:
-            writer.writerow(row_data.keys())
-            file_exists = True
-        writer.writerow(row_data.values())
-    return file_exists
 
 if __name__ == '__main__':
     SIMULATOR_PATH = "./udacity/udacity_sim_tracks/udacity.x86_64"
@@ -44,7 +35,7 @@ if __name__ == '__main__':
 
     IMAGE_SIZE = (160, 320) #Perturbated Image Size, normal same as input size
     PERTURBATIONS = ["scale_image"]
-    INTENSITY = 4 # scale from 0 to 4
+    SCALE = 4 # scale from 0 to 4
     LOW_SPEED_THRESHOLD = 0.01
     LOW_SPEED_LIMIT = 20
 
@@ -57,7 +48,7 @@ if __name__ == '__main__':
         perturbations = ["no_perturb"]
 
     for perturbation in PERTURBATIONS:
-        for scale in range(0, INTENSITY + 1):
+        for scale in range(0, SCALE + 1):
             obs, _ = env.reset(track=TRACK, weather=WEATHER, daytime=DAYTIME)
 
             while not obs or not obs.is_ready():
@@ -70,12 +61,7 @@ if __name__ == '__main__':
 
             LOG_FILE = f"{TRACK}_{perturbation}_intense{scale}_log.csv"
             log_path = os.path.join("./udacity/perturb_logs", LOG_FILE)
-            file_exists = os.path.exists(log_path)
-            # overwrite a new csv log, in logging func it has to be mode='a'
-            if file_exists:
-                os.remove(log_path)
-                print(f"{log_path} will be overwritten")
-
+            data = []
             low_speed_count, csv_index = 0, 0
             keep_running = True
             print(scale)
@@ -85,7 +71,7 @@ if __name__ == '__main__':
                 #resized_image = cv2.resize(image, (width, height), cv2.INTER_NEAREST)
 
                 if perturb:
-                    obs.input_image = image_perturbation.perturbation(image, perturbation, INTENSITY)
+                    obs.input_image = image_perturbation.perturbation(image, perturbation, scale)
 
                 actions = agent(obs)
                 # print(obs.input_image.shape) # (160, 320, 3)
@@ -106,11 +92,11 @@ if __name__ == '__main__':
                     crash["low_speed"] += 1
                     keep_running = False
 
-                file_exists = perturb_driving_log(log_path, {
+                data.append({
                     'index': csv_index,
                     'track': TRACK,
                     'perturb_name': perturbation,
-                    'scale': INTENSITY,
+                    'scale': scale,
                     'lap': obs.lap,
                     'waypoint': obs.sector,
                     'speed': obs.speed,
@@ -121,7 +107,7 @@ if __name__ == '__main__':
                     'collision': crash.get("collision"),
                     'low_speed': crash.get("low_speed"),
                     'is_crashed': crash.get("is_crashed")
-                }, file_exists)
+                })
 
                 env.simulator.sim_state['is_crashed'] = False
 
@@ -129,6 +115,7 @@ if __name__ == '__main__':
                     obs = env.observe()
                     time.sleep(0.05)
 
+            PerturbationDrive.perturb_driving_log(log_path, data)
             print(f"Data saved under {TRACK}_{perturbation}_log.csv!")
             print("Out_of_track Count: ", crash.get("out_of_track"), "; Collision Count: ", crash.get("collision") )
 

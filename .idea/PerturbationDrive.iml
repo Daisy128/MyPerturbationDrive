@@ -13,6 +13,9 @@
       <excludeFolder url="file://$MODULE_DIR$/output_logs" />
       <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_road_generator" />
       <excludeFolder url="file://$MODULE_DIR$/udacity/udacity_sim_tracks" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/models/datasets" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/models/train_dataset" />
+      <excludeFolder url="file://$MODULE_DIR$/udacity/perturb_logs" />
     </content>
     <orderEntry type="jdk" jdkName="perturb-env" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

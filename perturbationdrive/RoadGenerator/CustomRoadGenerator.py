@@ -80,7 +80,7 @@ class CustomRoadGenerator(RoadGenerator):
             seg_length = self.seg_length
             if seg_lengths is not None and i_valid < len(seg_lengths):
                 seg_length = seg_lengths[i_valid]
-                print(f"custom seg length {seg_length}")
+                # print(f"custom seg length {seg_length}")
             nodes.append(
                 self._get_next_node(
                     nodes[-2],

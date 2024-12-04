@@ -1,6 +1,7 @@
 # used modules from perturbation drive
 from numpy import ndarray, uint8
 import matplotlib.patches as patches
+import os
 import tensorflow as tf
 #import cvxpy as cp
 from perturbationdrive import (
@@ -18,7 +19,6 @@ import traceback
 from examples.udacity.udacity_utils.envs.udacity.udacity_gym_env import (
     UdacityGymEnv_RoadGen,
 )
-import matplotlib.pyplot as plt
 from typing import Union, Tuple
 import cv2
 import gym
@@ -26,9 +26,10 @@ import numpy as np
 import time
 import math
 
+from udacity.perturbation.perturbationdrive import PerturbationDrive
+
 WAYPOINT_THRESHOLD = 5
 ANGLE_THRESHOLD = 0
-PID=False
 
 
 class Waypoint_control_utils():
@@ -166,190 +167,6 @@ class Waypoint_control_utils():
             return dot_product <= 0
 
 
-def pid_speed20(road_error, angle_error, speed_error, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error):
-    
-    road_error=-road_error
-    if abs(road_error)>1:
-        Kp_road = 0.6
-    else:
-        Kp_road = 0.45
-    
-    Ki_road = 0.0
-    Kd_road = 0.0001
-    
-    if angle_error<25:
-        Kp_angle = 0.003
-        Kd_angle = 0.002
-    else:
-        Kp_angle = 0.001
-        Kd_angle = 0.002
-
-    Ki_angle = 0.0
-    
-
-    Kp_speed = 0.1
-    Ki_speed = 0.0 
-    Kd_speed = 0.0
-    
-    P_angle = Kp_angle * angle_error
-    I_angle = Ki_angle * total_angle_error
-    D_angle = Kd_angle * (angle_error - prev_angle_error)
-
-    P_road = Kp_road * road_error
-    I_road = Ki_road * total_road_error
-    D_road= Kd_road * (road_error - prev_road_error)
-
-    
-    
-    steering = P_angle + I_angle + D_angle 
-    steering =  P_road + I_road + D_road + steering
-
-    steering = max(-1, min(1, steering))
-
-    P_speed = Kp_speed * speed_error
-    I_speed = Ki_speed * total_speed_error
-    D_speed = Kd_speed * (speed_error - prev_speed_error)
-    throttle = P_speed + I_speed + D_speed
-    throttle -= 0.6 * abs(road_error)
-    throttle = max(0.05, min(0.8, throttle))
-
-
-
-    # print(f"s: {steering}, th: {throttle}, kp angle: {P_angle + I_angle + D_angle}, Kp road: {P_road + I_road + D_road}")
-    
-    prev_road_error=road_error
-    prev_angle_error=angle_error
-    prev_speed_error=speed_error
-    total_road_error+=road_error
-    total_angle_error+=angle_error
-    total_speed_error+=speed_error
-    return throttle, steering, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error
-
-def pid_speed21(road_error, angle_error, speed_error, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error):
-    
-    road_error=-road_error
-    if abs(road_error)>1:
-        Kp_road = 0.6
-    else:
-        Kp_road = 0.45
-    
-    Ki_road = 0.0
-    Kd_road = 0.000
-    
-    if angle_error<25:
-        Kp_angle = 0.003
-        Kd_angle = 0.000
-    else:
-        Kp_angle = 0.001
-        Kd_angle = 0.000
-
-    Ki_angle = 0.0
-    
-
-    Kp_speed = 0.1
-    Ki_speed = 0.0 
-    Kd_speed = 0.0
-    
-    P_angle = Kp_angle * angle_error
-    I_angle = Ki_angle * total_angle_error
-    D_angle = Kd_angle * (angle_error - prev_angle_error)
-
-    P_road = Kp_road * road_error
-    I_road = Ki_road * total_road_error
-    D_road= Kd_road * (road_error - prev_road_error)
-
-    
-    
-    steering = P_angle + I_angle + D_angle 
-    steering =  P_road + I_road + D_road + steering
-
-    steering = max(-1, min(1, steering))
-
-    P_speed = Kp_speed * speed_error
-    I_speed = Ki_speed * total_speed_error
-    D_speed = Kd_speed * (speed_error - prev_speed_error)
-    throttle = P_speed + I_speed + D_speed
-    throttle -= 0.6 * abs(road_error)
-    throttle = max(0.1, min(0.8, throttle))
-
-
-
-    # print(f"s: {steering}, th: {throttle}, kp angle: {P_angle + I_angle + D_angle}, Kp road: {P_road + I_road + D_road}")
-    
-    prev_road_error=road_error
-    prev_angle_error=angle_error
-    prev_speed_error=speed_error
-    total_road_error+=road_error
-    total_angle_error+=angle_error
-    total_speed_error+=speed_error
-    return throttle, steering, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error
-
-
-
-def pid_speed25(test,road_error, angle_error, speed_error, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error):
-    
-    road_error=-road_error
-    # if abs(road_error)>1:
-    Kp_road = 0.65
-    # else:
-    #     Kp_road = 0.3
-    
-    Ki_road = 0.0
-    if test:
-        Kd_road = 0.0
-    else:
-        Kd_road = 0.4
-    
-    Kp_angle = 0.03
-    Ki_angle = 0.0
-    if test:
-        Kd_angle = 0.00
-    else:
-        Kd_angle = 0.04
-
-    Kp_speed = 0.1
-    Ki_speed = 0.0
-    if test:
-        Kd_speed = 0.0
-    else:
-        Kd_speed = 0.1
-    
-    P_angle = Kp_angle * angle_error
-    I_angle = Ki_angle * total_angle_error
-    D_angle = Kd_angle * (angle_error - prev_angle_error)
-
-    P_road = Kp_road * road_error
-    I_road = Ki_road * total_road_error
-    D_road= Kd_road * (road_error - prev_road_error)
-
-    
-    
-    steering = P_angle + I_angle + D_angle 
-    steering =  P_road + I_road + D_road + steering
-
-    steering = max(-1, min(1, steering))
-
-    P_speed = Kp_speed * speed_error
-    I_speed = Ki_speed * total_speed_error
-    D_speed = Kd_speed * (speed_error - prev_speed_error)
-    throttle = P_speed + I_speed + D_speed
-    throttle -= 0.6 * abs(road_error)
-    throttle = max(0.01, min(0.8, throttle))
-
-
-
-    # print(f"s: {steering}, th: {throttle}, kp angle: {P_angle + I_angle + D_angle}, Kp road: {P_road + I_road + D_road}")
-    
-    prev_road_error=road_error
-    prev_angle_error=angle_error
-    prev_speed_error=speed_error
-    total_road_error+=road_error
-    total_angle_error+=angle_error
-    total_speed_error+=speed_error
-    return throttle, steering, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error
-
-
-
 class UdacitySimulator(PerturbationSimulator):
     def __init__(
         self,
@@ -388,8 +205,16 @@ class UdacitySimulator(PerturbationSimulator):
         self.logger.info(f"Initial pos: {self.initial_pos}")
 
     def simulate_scanario(
-        self, agent: Union[ADS,None], scenario: Scenario, perturbation_controller: Union[ImagePerturbation,None], image_size: Tuple[float, float] = (160, 320), perturb=False, model_drive=False, weather="Sun", intensity=90
-    ) -> ScenarioOutcome:
+        self,
+        agent: Union[ADS,None],
+        scenario: Scenario,
+        perturbation_controller: Union[ImagePerturbation,None],
+        image_size: Tuple[float, float] = (160, 320),
+        perturb=False,
+        model_drive=False,
+        weather="Sun",
+        intensity=90
+    ) -> bool:
         try:
             waypoints = scenario.waypoints
             height = image_size[0]
@@ -400,31 +225,14 @@ class UdacitySimulator(PerturbationSimulator):
             monitor.display_waiting_screen()
             self.logger.info(f"{5 * '-'} Starting udacity scenario {5 * '_'}")
 
-            # set all params for init loop
-            actions = [[0.0, 0.0]]
-            perturbed_image = None
-
             # set up params for saving data
-            pos_list = []
             xte_list = []
-            actions_list = []
-            pid_list = []
-            speed_list = []
             original_image_list=[]
-            perturbed_image_list=[]
             isSuccess = False
             done = False
             timeout = False
 
-            prev_road_error = 0.0
-            total_road_error = 0.0
-            prev_angle_error = 0.0
-            total_angle_error = 0.0
-            prev_speed_error = 0.0
-            total_speed_error = 0.0
-
             # reset the scene to match the scenario
-            # Road generatior ir none because we currently do not build random roads
             self.client.weather(weather,intensity)
 
             obs: ndarray[uint8] = self.client.reset(
@@ -433,10 +241,6 @@ class UdacitySimulator(PerturbationSimulator):
 
             obs, done, info = self.client.observe()
             start_time = time.time()
-            target_speed=30.0
-            # target_speed=25.0
-            prev_throttle =  0.0
-            prev_steering = 0.0
             waypoint_controller = Waypoint_control_utils(WAYPOINT_THRESHOLD, ANGLE_THRESHOLD)
 
             current_waypoint_index=0
@@ -445,10 +249,10 @@ class UdacitySimulator(PerturbationSimulator):
             # print(len(waypoint_list))
 
             counter=0
-            # action loop
+            # additional iteration once
             once=True
-            while not done:
-                
+            data = []
+            while True:
                 counter+=1
                 if time.time() - start_time > 100:
                     self.logger.info("Udacity: Timeout after 100s")
@@ -467,59 +271,49 @@ class UdacitySimulator(PerturbationSimulator):
                     image=perturbed_image
                 else:
                     image=obs
-                
-                road_error=float(info['cte_pid'])
-                angle_error=float(info['angle'])
-                speed_error=target_speed-float(info['speed'])
 
-                # print(f"s:{info['speed']}")
-                if PID:
-                    throttle, steering, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error  = pid_speed20(road_error, angle_error, speed_error, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error)
-                    if road_error==prev_road_error and prev_angle_error==angle_error and speed_error==prev_speed_error:
-                        steering=prev_steering
-                        throttle=prev_throttle
-                else:
-                    rotation=info["orientation_euler"]
+                rotation=info["orientation_euler"]
 
-                    if current_waypoint_index < len(waypoint_list):
+                if current_waypoint_index < len(waypoint_list):
+                    current_waypoint = waypoint_list[current_waypoint_index]
+                x, y = current_waypoint
+                steering, throttle, dist, angl_diff,angle = waypoint_controller.calculate_control(x, y, info["pos"], rotation)
+
+                if dist <= WAYPOINT_THRESHOLD:
+                    current_waypoint_index += 4
+                    if  current_waypoint_index < len(waypoint_list):
                         current_waypoint = waypoint_list[current_waypoint_index]
                     x, y = current_waypoint
-                    steering, throttle, dist, angl_diff,angle = waypoint_controller.calculate_control(x, y, info["pos"], rotation)
+                    steering,throttle , dist, angl_diff,angle = waypoint_controller.calculate_control(x, y, info["pos"], rotation)
 
-                    if dist <= WAYPOINT_THRESHOLD:
-                        current_waypoint_index += 4
-                        if  current_waypoint_index < len(waypoint_list):
-                            current_waypoint = waypoint_list[current_waypoint_index]
-                        x, y = current_waypoint
-                        steering,throttle , dist, angl_diff,angle = waypoint_controller.calculate_control(x, y, info["pos"], rotation)
+                if done:
+                    if once:  # one additional iteration
+                        once = False
+                    else:  # Exit the loop after the "extra once"
+                        break
 
-                    throttle, _, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error  = pid_speed21(road_error, angle_error, speed_error, prev_road_error, prev_angle_error, prev_speed_error, total_road_error, total_angle_error, total_speed_error)
-
-                    # steering, _, dist, angl_diff = waypoint_controller.calculate_control(x, y, info["pos"], info["orientation"])
-                    # print(f'Going to: {current_waypoint[0]},{current_waypoint[1]} currently at {info["pos"][0]},{info["pos"][1]} distance: {dist} angle: {angl_diff}')
-
-                pid_actions = tf.constant([[steering, throttle]], dtype=tf.float32)
-
-                prev_throttle=throttle
-                prev_steering=steering
+                data.append({
+                    'index': counter,
+                    'track': "Road_Generator",
+                    'perturb_name': perturbation_function_string,
+                    'scale': perturbation_scale,
+                    'speed': info['speed'],
+                    'steer': steering,
+                    'throttle': throttle,
+                    'cte': dist,
+                    # 'out_of_track': crash.get("out_of_track"),
+                    # 'collision': crash.get("collision"),
+                    # 'low_speed': crash.get("low_speed"),
+                    'is_crashed': not done
+                })
 
                 # agent makes a move, the agent also selects the dtype and adds a batch dimension
-                if model_drive:
-                    actions = agent.action(image)
-                else:
-                    actions = pid_actions
-                # print(actions)
+                actions = agent.action(image)
 
                 # clip action to avoid out of bound errors
                 if isinstance(self.client.action_space, gym.spaces.Box):
                     actions = np.clip(
                         actions,
-                        self.client.action_space.low,
-                        self.client.action_space.high,
-                    )
-                if isinstance(self.client.action_space, gym.spaces.Box):
-                    pid_actions = np.clip(
-                        pid_actions,
                         self.client.action_space.low,
                         self.client.action_space.high,
                     )
@@ -532,20 +326,13 @@ class UdacitySimulator(PerturbationSimulator):
                 )
                 # obs is the image, info contains the road and the position of the car
                 obs, done, info = self.client.step(actions)
+
                 time.sleep(0.015)
-                # print(actions)
 
                 # log new info
-                pos_list.append(info["pos"])
                 xte_list.append(info["cte"])
-                speed_list.append(info["speed"])
-                actions_list.append(actions)
-                pid_list.append(pid_actions)
-                if perturb:
-                    perturbed_image_list.append(image)
 
             # determine if we were successful
-            # plt.close()
             isSuccess = max([abs(xte) for xte in xte_list]) < self.max_xte
             if timeout:
                 isSuccess=False
@@ -555,22 +342,17 @@ class UdacitySimulator(PerturbationSimulator):
             monitor.display_disconnect_screen()
             monitor.destroy()
 
+            log_name = f"RoadGen_{perturbation_function_string}_intense{perturbation_scale}_log.csv"
+            log_path = os.path.join("./udacity/perturb_logs", log_name)
+
+            # store in log only when ADS drives a not short way but crashed before the end
+            if data and data[-1]['index'] > 400 and isSuccess==False:
+                PerturbationDrive.perturb_driving_log(log_path=log_path, data=data)
+
             # reset for the new track
             _ = self.client.reset(skip_generation=False, track_string=waypoints)
-            # return the scenario output
-            return ScenarioOutcome(
-                frames=[x for x in range(len(pos_list))],
-                pos=pos_list,
-                xte=xte_list,
-                speeds=speed_list,
-                actions=actions_list,
-                pid_actions=pid_list,
-                scenario=scenario,
-                original_images=original_image_list,
-                perturbed_images=perturbed_image_list,
-                isSuccess=isSuccess,
-                timeout=timeout,
-            )
+
+            return isSuccess
 
         except Exception as e:
             # close the simulator

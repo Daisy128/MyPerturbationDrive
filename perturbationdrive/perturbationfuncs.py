@@ -196,7 +196,7 @@ def contrast(scale, img):
 
     Returns: numpy array:
     """
-    factor = [1.1, 1.2, 1.3, 1.5, 1.7][scale]
+    factor = [1.9, 2.1, 2.3, 2.5, 2.7][scale]
     pivot = 127.5
     return np.clip(pivot + (img - pivot) * factor, 0, 255)
 
