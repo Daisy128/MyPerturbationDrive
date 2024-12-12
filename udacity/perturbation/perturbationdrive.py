@@ -153,19 +153,6 @@ class PerturbationDrive:
             scenario_writer = OfflineScenarioOutcomeWriter(log_dir, overwrite_logs)
             scenario_writer.write(results)
 
-    @staticmethod
-    def perturb_driving_log(log_path, data):
-        if os.path.exists(log_path):
-            os.remove(log_path)
-            print(f"{log_path} will be overwritten")
-
-        with open(log_path, mode='w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            if data:
-                writer.writerow(data[0].keys())
-                for row in data:
-                    writer.writerow(row.values())
-
     def grid_seach(
             self,
             perturbation_functions: List[str],

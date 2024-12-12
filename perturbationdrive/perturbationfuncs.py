@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from io import BytesIO
+from typing import List
 from perturbationdrive.AttentionMasks.raindrops_generator.raindrop.dropgenerator import generateDrops, generate_label
 from perturbationdrive.AttentionMasks.raindrops_generator.raindrop.config import cfg
 from .kernels.kernels import (
@@ -17,6 +18,13 @@ from .utils.utilFuncs import (
     clamp_values
 )
 
+def factors_append(factors: List=None, scale: int = 5):
+
+    addition_count = scale - len(factors) + 1
+    new_factors = [2 * factors[-1] - factors[-2] for _ in range(addition_count)]
+    factors.extend(new_factors)
+
+    return factors[scale]
 
 def gaussian_noise(scale, img):
     """
@@ -28,7 +36,12 @@ def gaussian_noise(scale, img):
 
     Returns: numpy array
     """
-    factor = [0.03, 0.06, 0.12, 0.18, 0.22][scale]
+    factors = [0.03, 0.06, 0.12, 0.18, 0.22]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
+
     # scale to a number between 0 and 1
     x = np.array(img, dtype=np.float32) / 255.0
     # add random between 0 and 1
@@ -50,7 +63,15 @@ def poisson_noise(scale, img):
 
     Returns: numpy array: Image with salt and pepper noise.
     """
-    factor = [120, 105, 87, 55, 30][scale]
+    # factors = [120, 105, 87, 55, 30]
+    factors = [10000]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
+
+    # print("Factor is: ", factor)
+
     x = np.array(img) / 255.0
     return np.clip(np.random.poisson(x * factor) / float(factor), 0, 1) * 255
 
@@ -65,7 +86,11 @@ def impulse_noise(scale, img):
 
     Returns: numpy array: Image with salt and pepper noise.
     """
-    factor = [0.01, 0.02, 0.04, 0.065, 0.10][scale]
+    factors = [0.01, 0.02, 0.04, 0.065, 0.10]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     # Number of salt noise pixels
     num_salt = np.ceil(factor * img.size * 0.5)
     # Add salt noise
@@ -89,7 +114,11 @@ def defocus_blur(scale, image):
 
     Returns: numpy array:
     """
-    factor = [2, 5, 6, 9, 12][scale]
+    factors = [2, 5, 6, 9, 12]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     # Create the disk-shaped kernel.
     kernel = create_disk_kernel(factor)
     # Convolve the image with the kernel.
@@ -107,7 +136,11 @@ def glass_blur(scale, image):
 
     Returns: numpy array:
     """
-    factor = [2, 5, 6, 9, 12][scale]
+    factors = [2, 5, 6, 9, 12]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     # Get the height and width of the image.
     height, width = image.shape[:2]
     # Generate random offsets for each pixel in the image.
@@ -132,7 +165,15 @@ def motion_blur(scale, image, size=10, angle=45):
 
     Returns: numpy array:
     """
-    size, angle = [(2, 5), (4, 12), (6, 20), (10, 30), (15, 45)][scale]
+    factors = [(2, 5), (4, 12), (6, 20), (10, 30), (15, 45)]
+
+    if scale < len(factors):
+        size, angle = factors[scale]
+    else:
+        size_list, angle_list = zip(*factors) # size_list，angle_list： zip
+        size = factors_append(list(size_list), scale)
+        angle = factors_append(list(angle_list), angle)
+
     # Create the motion blur kernel.
     kernel = create_motion_blur_kernel(size, angle)
     # Convolve the image with the kernel.
@@ -176,7 +217,11 @@ def increase_brightness(scale, image):
 
     Returns: numpy array:
     """
-    factor = [1.1, 1.2, 1.3, 1.5, 1.7][scale]
+    factors = [1.1, 1.2, 1.3, 1.5, 1.7]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     # Convert the image to HSV color space
     hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     # Adjust the V channel
@@ -196,7 +241,11 @@ def contrast(scale, img):
 
     Returns: numpy array:
     """
-    factor = [1.9, 2.1, 2.3, 2.5, 2.7][scale]
+    factors = [1.9, 2.1, 2.3, 2.5, 2.7]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     pivot = 127.5
     return np.clip(pivot + (img - pivot) * factor, 0, 255)
 
@@ -211,7 +260,13 @@ def elastic(scale, img):
 
     Returns: numpy array:
     """
-    alpha, sigma = [(2, 0.4), (3, 0.75), (5, 0.9), (7, 1.2), (10, 1.5)][scale]
+    factors = [(2, 0.4), (3, 0.75), (5, 0.9), (7, 1.2), (10, 1.5)]
+    if scale < len(factors):
+        alpha, sigma = factors[scale]
+    else:
+        alpha_list, sigma_list = zip(*factors)
+        alpha = factors_append(list(alpha_list), scale)
+        sigma = factors_append(list(sigma_list), alpha)
     # Generate random displacement fields
     dx = np.random.uniform(-1, 1, img.shape[:2]) * alpha
     dy = np.random.uniform(-1, 1, img.shape[:2]) * alpha
@@ -243,7 +298,11 @@ def pixelate(scale, img):
 
     Returns: numpy array:
     """
-    factor = [0.85, 0.55, 0.35, 0.2, 0.1][scale]
+    factors = [0.85, 0.55, 0.35, 0.2, 0.1]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     h, w = img.shape[:2]
     img = cv2.resize(img, (int(w * factor), int(h * factor)), cv2.INTER_AREA)
     return cv2.resize(img, (w, h), cv2.INTER_NEAREST)
@@ -259,7 +318,11 @@ def jpeg_filter(scale, image):
 
     Returns: numpy array:
     """
-    factor = [30, 18, 15, 10, 5][scale]
+    factors = [30, 18, 15, 10, 5]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     # Encode the image as JPEG with the specified quality
     _, jpeg_encoded_image = cv2.imencode(
         ".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), factor]
@@ -283,7 +346,11 @@ def shear_image(scale, image):
 
     Returns: numpy array:
     """
-    shear_factor = [0.12, 0.2, 0.32, 0.45, 0.6][scale]
+    shear_factors = [0.12, 0.2, 0.32, 0.45, 0.6]
+    if scale < len(shear_factors):
+        shear_factor = shear_factors[scale]
+    else:
+        shear_factor = factors_append(shear_factors, scale)
     # Load the image
     if image is None:
         raise ValueError("Image not found at the given path.")
@@ -308,7 +375,14 @@ def translate_image(scale, image):
 
     Returns: numpy array:
     """
-    tx, ty = [(-0.1, 0.1), (25, -25), (40, -40), (65, -65), (90, -90)][scale]
+    factors = [(-0.1, 0.1), (25, -25), (40, -40), (65, -65), (90, -90)]
+    if scale < len(factors):
+        tx, ty = [(-0.1, 0.1), (25, -25), (40, -40), (65, -65), (90, -90)][scale]
+    else:
+        tx_list, ty_list = zip(*factors)
+        tx = factors_append(list(tx_list), scale)
+        ty = factors_append(list(ty_list), scale)
+
     # Load the image
     if image is None:
         raise ValueError("Image not found at the given path.")
@@ -332,15 +406,19 @@ def scale_image(scale, image):
 
     Returns: numpy array:
     """
-    scale_factor = [0.96, 0.9, 0.8, 0.68, 0.5][scale]
+    factors = [0.96, 0.9, 0.8, 0.68, 0.5]
+    if scale < len(factors):
+        factor = factors[scale]
+    else:
+        factor = factors_append(factors, scale)
     rows, cols, _ = image.shape
 
     # Resize the image
-    new_dimensions = (int(cols * scale_factor), int(rows * scale_factor))
+    new_dimensions = (int(cols * factor), int(rows * factor))
     scaled = cv2.resize(image, new_dimensions, interpolation=cv2.INTER_LINEAR)
 
     # If scaled image is smaller, pad it
-    if scale_factor < 1:
+    if factor < 1:
         top_pad = (rows - scaled.shape[0]) // 2
         bottom_pad = rows - scaled.shape[0] - top_pad
         left_pad = (cols - scaled.shape[1]) // 2
@@ -375,7 +453,11 @@ def rotate_image(scale, image):
 
     Returns: numpy array:
     """
-    angle = [10, 20, 45, 90, 180][scale]
+    angles = [10, 20, 45, 90, 180]
+    if scale < len(angles):
+        angle = angles[scale]
+    else:
+        angle = factors_append(angles, scale)
     rows, cols, _ = image.shape
     center = (cols / 2, rows / 2)
 
@@ -398,7 +480,11 @@ def fog_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.05, 0.12, 0.22, 0.35, 0.6][scale]
+    severity_level = [0.05, 0.12, 0.22, 0.35, 0.6]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     rows, cols, _ = image.shape
     # Determine size for diamond-square algorithm (closest power of 2 plus 1)
     size = 2 ** int(np.ceil(np.log2(max(rows, cols)))) + 1
@@ -432,7 +518,11 @@ def splatter_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.1, 0.2, 0.3, 0.4, 0.5][scale]
+    severity_level = [0.1, 0.2, 0.3, 0.4, 0.5]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     rows, cols, _ = image.shape
 
     # Determine number and size of splatters based on severity
@@ -463,8 +553,11 @@ def dotted_lines_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.1, 0.2, 0.3, 0.4, 0.5][scale]
-
+    severity_level = [0.1, 0.2, 0.3, 0.4, 0.5]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     rows, cols, _ = image.shape
 
     # Determine parameters based on severity
@@ -500,7 +593,12 @@ def zigzag_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.1, 0.2, 0.3, 0.4, 0.6][scale]
+
+    severity_level = [0.1, 0.2, 0.3, 0.4, 0.6]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
 
     rows, cols, _ = image.shape
 
@@ -540,7 +638,11 @@ def canny_edges_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.01, 0.1, 0.25, 0.4, 0.7][scale]
+    severity_level = [0.01, 0.1, 0.25, 0.4, 0.7]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     edge_color = (255, 0, 0)
 
     # Convert the image to grayscale for edge detection
@@ -571,8 +673,11 @@ def speckle_noise_filter(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.02, 0.05, 0.09, 0.14, 0.2][scale]
-
+    severity_level = [0.02, 0.05, 0.09, 0.14, 0.2]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     rows, cols, _ = image.shape
     # Generate noise pattern
     noise = np.random.normal(1, severity, (rows, cols, 3))
@@ -637,7 +742,11 @@ def high_pass_filter(scale, image):
 
     Returns: numpy array:
     """
-    kernel_size = [35, 59, 83, 107, 113][scale]
+    kernel_level = [35, 59, 83, 107, 113]
+    if scale < len(kernel_level):
+        kernel_size = kernel_level[scale]
+    else:
+        kernel_size = factors_append(kernel_level, scale)
 
     image_float32 = np.float32(image)
     # Blur the image to get the low frequency components
@@ -660,8 +769,11 @@ def low_pass_filter(scale, image):
 
     Returns: numpy array:
     """
-
-    kernel_size = [15, 23, 30, 36, 40][scale]
+    kernel_level = [15, 23, 30, 36, 40]
+    if scale < len(kernel_level):
+        kernel_size = kernel_level[scale]
+    else:
+        kernel_size = factors_append(kernel_level, scale)
 
     # Convert the image to HSV color space
     hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
@@ -701,7 +813,12 @@ def phase_scrambling(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.05, 0.15, 0.26, 0.38, 0.55][scale]
+    severity_level = [0.05, 0.15, 0.26, 0.38, 0.55]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
+
     # Scramble each channel
     R, G, B = cv2.split(image)
     scrambled_R = scramble_channel(R, severity)
@@ -727,7 +844,11 @@ def histogram_equalisation(scale, image):
 
     Returns: numpy array:
     """
-    clip_limit = [1, 3, 5, 7, 10][scale]
+    clip_limit_level = [1, 3, 5, 7, 10]
+    if scale < len(clip_limit_level):
+        clip_limit = clip_limit_level[scale]
+    else:
+        clip_limit = factors_append(clip_limit_level, scale)
     equalised_images = []
 
     # Convert the image to HSV color space
@@ -760,7 +881,11 @@ def reflection_filter(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.2, 0.3, 0.45, 0.6, 0.9][scale]
+    severity_level = [0.2, 0.3, 0.45, 0.6, 0.9]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     # Calculate the portion of the image to reflect
     portion_to_reflect = int(image.shape[0] * severity)
 
@@ -786,7 +911,11 @@ def white_balance_filter(scale, image):
 
     Returns: numpy array:
     """
-    severity = [0.1, 0.25, 0.5, 0.75, 0.99][scale]
+    severity_level = [0.1, 0.25, 0.5, 0.75, 0.99]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     return cv2.addWeighted(
         image, 1 - severity, simple_white_balance(image.copy()), severity, 0
     )
@@ -803,8 +932,13 @@ def sharpen_filter(scale, image):
 
     Returns: numpy array:
     """
-    severity = [1, 2, 3, 4, 5][scale]
-    weight = [0.9, 0.8, 0.7, 0.6, 0.5][scale]
+    severity_level = [1, 2, 3, 4, 5]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
+    weight_level = [0.9, 0.8, 0.7, 0.6, 0.5]
+    weight = factors_append(weight_level, scale)
 
     # Base sharpening kernel
     kernel = np.array([[-1, -1, -1], [-1, 8 + severity, -1], [-1, -1, -1]])
@@ -825,7 +959,11 @@ def grayscale_filter(scale, image):
     Returns: numpy array:
     """
 
-    severity = [0.1, 0.2, 0.35, 0.55, 0.85][scale]
+    severity_level = [0.1, 0.2, 0.35, 0.55, 0.85]
+    if scale < len(severity_level):
+        severity = severity_level[scale]
+    else:
+        severity = factors_append(severity_level, scale)
     # Convert the image to grayscale
     grayscale_img = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     grayscale_img_colored = cv2.cvtColor(grayscale_img, cv2.COLOR_GRAY2RGB)
@@ -848,8 +986,11 @@ def posterize_filter(scale, image):
 
     Returns: numpy array:
     """
-    scale = [128, 64, 32, 8, 4][scale]
-
+    scale_level = [128, 64, 32, 8, 4]
+    if scale < len(scale_level):
+        scale = scale_level[scale]
+    else:
+        scale = factors_append(scale_level, scale)
     # Posterize the image
     indices = np.arange(0, 256)
     divider = np.linspace(0, 255, scale + 1)[1]
@@ -875,8 +1016,11 @@ def cutout_filter(scale, image):
 
     Returns: numpy array:
     """
-    scale = [1, 2, 4, 6, 10][scale]
-
+    scale_level = [1, 2, 4, 6, 10]
+    if scale < len(scale_level):
+        scale = scale_level[scale]
+    else:
+        scale = factors_append(scale_level, scale)
     h, w, _ = image.shape
 
     # Apply patches to the image
@@ -906,8 +1050,11 @@ def sample_pairing_filter(scale, image):
     Returns: numpy array:
     """
 
-    alpha = [0.9, 0.7, 0.5, 0.3, 0.1][scale]
-
+    alpha_level = [0.9, 0.7, 0.5, 0.3, 0.1]
+    if scale < len(alpha_level):
+        alpha = alpha_level[scale]
+    else:
+        alpha = factors_append(alpha_level, scale)
     # Randomly select a section of the image
     h, w, _ = image.shape
     start_x = np.random.randint(0, w // 2)
@@ -937,7 +1084,15 @@ def gaussian_blur(scale, image):
     Returns: numpy array:
     """
 
-    kernel_size = [(3, 3), (7, 7), (15, 15), (25, 25), (41, 41)][scale]
+    kernel_size_list = [(3, 3), (7, 7), (15, 15), (25, 25), (41, 41)]
+
+    if scale < len(kernel_size_list):
+        kernel_size = [(3, 3), (7, 7), (15, 15), (25, 25), (41, 41)][scale]
+    else:
+        x_factors_list, y_factors_list = zip(*kernel_size_list)
+        x_result = factors_append(list(x_factors_list), scale)
+        y_result = factors_append(list(y_factors_list), scale)
+        kernel_size = (x_result, y_result)
 
     # Apply Gaussian Blur
     blurred = cv2.GaussianBlur(image, kernel_size, 0)
@@ -956,8 +1111,11 @@ def saturation_filter(scale, image):
     Returns: numpy array:
     """
 
-    multiplier = [1.05, 1.15, 1.4, 1.65, 1.9][scale]
-
+    multiplier_level = [1.05, 1.15, 1.4, 1.65, 1.9]
+    if scale < len(multiplier_level):
+        multiplier = multiplier_level[scale]
+    else:
+        multiplier = factors_append(multiplier_level, scale)
     # Adjust the saturation channel
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     hsv[:, :, 1] = np.clip(hsv[:, :, 1] * multiplier, 0, 255)
@@ -979,7 +1137,11 @@ def saturation_decrease_filter(scale, image):
     Returns: numpy array:
     """
 
-    multiplier = [0.9, 0.85, 0.6, 0.35, 0.1][scale]
+    multiplier_level = [0.9, 0.85, 0.6, 0.35, 0.1]
+    if scale < len(multiplier_level):
+        multiplier = multiplier_level[scale]
+    else:
+        multiplier = factors_append(multiplier_level, scale)
 
     # Adjust the saturation channel
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -1001,13 +1163,21 @@ def fog_filter(scale, image):
 
     Returns: numpy array:
     """
-    intensity, noise_amount = [
+    factors = [
         (0.1, 0.05),
         (0.2, 0.1),
         (0.3, 0.2),
         (0.45, 0.3),
         (0.65, 0.45),
-    ][scale]
+    ]
+
+    if scale < len(factors):
+        intensity, noise_amount = factors[scale]
+    else:
+        intensity_list, noise_amount_list = zip(*factors)
+        intensity = factors_append(list(intensity_list), scale)
+        noise_amount = factors_append(list(noise_amount_list), scale)
+
     # Create a white overlay of the same size as the image
     fog_overlay = np.ones_like(image) * 255
     # Optionally, introduce some noise to the fog overlay
@@ -1030,7 +1200,12 @@ def frost_filter(scale, image):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.19, 0.25, 0.32, 0.4][scale]
+    intensity_level = [0.15, 0.19, 0.25, 0.32, 0.4]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
+
     frost_image_path = "./perturbationdrive/OverlayImages/frostImg.png"
     # Load the frost overlay image
     frost_overlay = cv2.imread(frost_image_path, cv2.IMREAD_UNCHANGED)
@@ -1064,7 +1239,11 @@ def snow_filter(scale, image):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.22, 0.3, 0.45, 0.6][scale]
+    intensity_level = [0.15, 0.22, 0.3, 0.45, 0.6]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     frost_image_path = "./perturbationdrive/OverlayImages/snow.png"
     # Load the frost overlay image
     frost_overlay = cv2.imread(frost_image_path, cv2.IMREAD_UNCHANGED)
@@ -1099,7 +1278,11 @@ def dynamic_snow_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     # Load the next frame from the iterator
     snow_overlay = next(iterator)
     snow_overlay = shift_color(snow_overlay, [71, 253, 135], [255, 255, 255])
@@ -1129,7 +1312,11 @@ def static_snow_filter(scale, image, snow_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     snow_overlay = shift_color(snow_overlay, [71, 253, 135], [255, 255, 255])
 
     if (
@@ -1157,7 +1344,12 @@ def dynamic_rain_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
+
     rain_overlay = next(iterator)
     rain_overlay = shift_color(rain_overlay, [31, 146, 59], [191, 35, 0])
 
@@ -1186,7 +1378,11 @@ def dynamic_raindrop_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     # Load the next frame from the iterator
     overlay = next(iterator)
     overlay = shift_color(overlay, [71, 253, 135], [255, 255, 255])
@@ -1218,7 +1414,12 @@ def static_rain_filter(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
+
     rain_overlay = shift_color(rain_overlay, [31, 146, 59], [191, 35, 0])
 
     if (
@@ -1297,7 +1498,11 @@ def dynamic_object_overlay(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     # Load the next frame from the iterator
     rain_overlay = next(iterator)
     rain_overlay = shift_color(rain_overlay, [175, 221, 202], [0, 0, 0])
@@ -1328,7 +1533,11 @@ def static_object_overlay(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     rain_overlay = shift_color(rain_overlay, [175, 221, 202], [0, 0, 0])
 
     # Resize the frost overlay to match the input image dimensions
@@ -1357,7 +1566,12 @@ def dynamic_sun_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
+
     # Load the next frame from the iterator
     rain_overlay = next(iterator)
     rain_overlay = shift_color(rain_overlay, [223, 234, 212], [28, 202, 255])
@@ -1388,7 +1602,11 @@ def static_sun_filter(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     # Load the next frame from the iterator
     rain_overlay = shift_color(rain_overlay, [223, 234, 212], [28, 202, 255])
 
@@ -1417,7 +1635,11 @@ def dynamic_lightning_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     # Load the next frame from the iterator
     rain_overlay = next(iterator)
     rain_overlay = shift_color(rain_overlay, [5, 122, 101], [8, 152, 188])
@@ -1448,7 +1670,11 @@ def static_lightning_filter(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     rain_overlay = shift_color(rain_overlay, [5, 122, 101], [8, 152, 188])
 
     if (
@@ -1476,7 +1702,12 @@ def dynamic_smoke_filter(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
+
     # Load the next frame from the iterator
     rain_overlay = next(iterator)
     rain_overlay = shift_color(rain_overlay, [30, 112, 65], [132, 132, 132])
@@ -1507,7 +1738,11 @@ def static_smoke_filter(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity = [0.15, 0.25, 0.4, 0.6, 0.85][scale]
+    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    if scale < len(intensity_level):
+        intensity = intensity_level[scale]
+    else:
+        intensity = factors_append(intensity_level, scale)
     rain_overlay = shift_color(rain_overlay, [30, 112, 65], [132, 132, 132])
     if (
         rain_overlay.shape[0] != image.shape[0]
