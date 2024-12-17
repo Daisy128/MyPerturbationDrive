@@ -14,3 +14,4 @@ def perturb_driving_log(csv_path, data):
             writer.writerow(data[0].keys())  # column names
             for row in data:
                 writer.writerow(row.values())
+

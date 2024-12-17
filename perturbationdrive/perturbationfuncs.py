@@ -63,8 +63,8 @@ def poisson_noise(scale, img):
 
     Returns: numpy array: Image with salt and pepper noise.
     """
-    # factors = [120, 105, 87, 55, 30]
-    factors = [10000]
+    factors = [120, 105, 87, 55, 30]
+    # factors = [10000]
     if scale < len(factors):
         factor = factors[scale]
     else:
@@ -202,8 +202,8 @@ def zoom_blur(scale, img):
     img = (np.array(img) / 255.0).astype(np.float32)
     out = np.zeros_like(img)
     for zoom_factor in c:
-        out += clipped_zoom(img, zoom_factor)
-    img = (img + out) / (len(c) + 1)
+        out += clipped_zoom(img, zoom_factor) * 0.5
+    img = (img + out) / (len(c)*0.5 + 1)
     return np.clip(img, 0, 1) * 255
 
 
@@ -217,7 +217,7 @@ def increase_brightness(scale, image):
 
     Returns: numpy array:
     """
-    factors = [1.1, 1.2, 1.3, 1.5, 1.7]
+    factors = [1.3, 1.4, 1.5, 1.6, 1.7]
     if scale < len(factors):
         factor = factors[scale]
     else:
@@ -241,7 +241,7 @@ def contrast(scale, img):
 
     Returns: numpy array:
     """
-    factors = [1.9, 2.1, 2.3, 2.5, 2.7]
+    factors = [1.1, 1.2, 1.3, 1.5, 1.7]
     if scale < len(factors):
         factor = factors[scale]
     else:
@@ -375,9 +375,9 @@ def translate_image(scale, image):
 
     Returns: numpy array:
     """
-    factors = [(-0.1, 0.1), (25, -25), (40, -40), (65, -65), (90, -90)]
+    factors = [(4, -4), (6, -6), (10, -10), (20, -20), (25, -25)]
     if scale < len(factors):
-        tx, ty = [(-0.1, 0.1), (25, -25), (40, -40), (65, -65), (90, -90)][scale]
+        tx, ty = factors[scale]
     else:
         tx_list, ty_list = zip(*factors)
         tx = factors_append(list(tx_list), scale)
@@ -480,7 +480,8 @@ def fog_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity_level = [0.05, 0.12, 0.22, 0.35, 0.6]
+    # severity_level = [0.05, 0.12, 0.22, 0.35, 0.40]
+    severity_level = [0.45, 0.50, 0.55, 0.60, 0.65]
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -742,6 +743,7 @@ def high_pass_filter(scale, image):
 
     Returns: numpy array:
     """
+    # kernel_level = [291] # fitted value for track1
     kernel_level = [35, 59, 83, 107, 113]
     if scale < len(kernel_level):
         kernel_size = kernel_level[scale]

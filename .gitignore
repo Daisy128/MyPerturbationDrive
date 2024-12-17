@@ -2,7 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode
 
 output_logs/
-udacity/udacity_sim_road_generator/
+udacity/road_generator_simulator/
 udacity/udacity_sim_tracks/
 examples/models/train_dataset/
 examples/models/datasets/

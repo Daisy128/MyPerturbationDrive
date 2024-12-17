@@ -662,7 +662,7 @@ FUNCTION_MAPPING = {
     "increase_brightness": increase_brightness,
     "contrast": contrast,
     "elastic": elastic,
-    "pixelate": pixelate,
+    "pixelate": pixelate,#till here
     "jpeg_filter": jpeg_filter,
     "shear_image": shear_image,
     "translate_image": translate_image,

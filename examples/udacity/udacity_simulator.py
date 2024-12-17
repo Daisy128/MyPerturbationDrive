@@ -27,6 +27,7 @@ import time
 import math
 
 from udacity.perturbation.perturbationdrive import PerturbationDrive
+from udacity.utils import perturb_driving_log
 
 WAYPOINT_THRESHOLD = 5
 ANGLE_THRESHOLD = 0
@@ -347,7 +348,7 @@ class UdacitySimulator(PerturbationSimulator):
 
             # store in log only when ADS drives a not short way but crashed before the end
             if data and data[-1]['index'] > 400 and isSuccess==False:
-                PerturbationDrive.perturb_driving_log(log_path=log_path, data=data)
+                perturb_driving_log(os.path.join(log_path,log_name), data)
 
             # reset for the new track
             _ = self.client.reset(skip_generation=False, track_string=waypoints)

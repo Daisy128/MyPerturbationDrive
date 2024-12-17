@@ -62,7 +62,6 @@ from perturbationdrive.perturbationfuncs import (
     perturb_random_n_attention_regions,
     effects_attention_regions,
     static_lightning_filter,
-    static_smoke_filter,
     static_sun_filter,
     static_rain_filter,
     static_snow_filter,
