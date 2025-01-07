@@ -104,7 +104,7 @@ class ImagePerturbation:
         self,
         funcs: List[str] = [],
         attention_map={},
-        image_size: Tuple[float, float] = (240, 320),
+        image_size: Tuple[float, float] = (160, 320),
     ):
         # Build list of all perturbation functions
         if len(funcs) == 0:

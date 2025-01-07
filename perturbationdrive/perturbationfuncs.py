@@ -64,7 +64,6 @@ def poisson_noise(scale, img):
     Returns: numpy array: Image with salt and pepper noise.
     """
     factors = [120, 105, 87, 55, 30]
-    # factors = [10000]
     if scale < len(factors):
         factor = factors[scale]
     else:
@@ -241,6 +240,7 @@ def contrast(scale, img):
 
     Returns: numpy array:
     """
+    # factors = [1.01, 1.02, 1.03, 1.05, 1.07] # track1 (fails on)
     factors = [1.1, 1.2, 1.3, 1.5, 1.7]
     if scale < len(factors):
         factor = factors[scale]
@@ -480,8 +480,8 @@ def fog_mapping(scale, image):
 
     Returns: numpy array:
     """
-    # severity_level = [0.05, 0.12, 0.22, 0.35, 0.40]
-    severity_level = [0.45, 0.50, 0.55, 0.60, 0.65]
+    severity_level = [0.05, 0.12, 0.22, 0.35, 0.40]
+    # severity_level = [0.45, 0.50, 0.55, 0.60, 0.65]
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -595,7 +595,9 @@ def zigzag_mapping(scale, image):
     Returns: numpy array:
     """
 
-    severity_level = [0.1, 0.2, 0.3, 0.4, 0.6]
+    # severity_level = [0.1, 0.2, 0.3, 0.4, 0.6]
+    severity_level = [100, 200]
+
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -639,7 +641,8 @@ def canny_edges_mapping(scale, image):
 
     Returns: numpy array:
     """
-    severity_level = [0.01, 0.1, 0.25, 0.4, 0.7]
+    # severity_level = [0.01, 0.1, 0.25, 0.4, 0.7]
+    severity_level = [1, 3, 7, 10, 15]
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -675,6 +678,7 @@ def speckle_noise_filter(scale, image):
     Returns: numpy array:
     """
     severity_level = [0.02, 0.05, 0.09, 0.14, 0.2]
+    # severity_level = [1, 2, 3, 4, 5]
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -883,6 +887,7 @@ def reflection_filter(scale, image):
 
     Returns: numpy array:
     """
+    # severity_level = [0.13, 0.15, 0.2, 0.3, 0.45] # track1
     severity_level = [0.2, 0.3, 0.45, 0.6, 0.9]
     if scale < len(severity_level):
         severity = severity_level[scale]
@@ -914,6 +919,7 @@ def white_balance_filter(scale, image):
     Returns: numpy array:
     """
     severity_level = [0.1, 0.25, 0.5, 0.75, 0.99]
+    # severity_level = [1, 2, 3, 4, 5] # track1
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -962,6 +968,7 @@ def grayscale_filter(scale, image):
     """
 
     severity_level = [0.1, 0.2, 0.35, 0.55, 0.85]
+    # severity_level = [1, 2, 3, 4, 5] # track1
     if scale < len(severity_level):
         severity = severity_level[scale]
     else:
@@ -1053,6 +1060,7 @@ def sample_pairing_filter(scale, image):
     """
 
     alpha_level = [0.9, 0.7, 0.5, 0.3, 0.1]
+    # alpha_level = [0.9, 0.8, 0.7, 0.6, 0.5] # track1
     if scale < len(alpha_level):
         alpha = alpha_level[scale]
     else:
@@ -1114,6 +1122,7 @@ def saturation_filter(scale, image):
     """
 
     multiplier_level = [1.05, 1.15, 1.4, 1.65, 1.9]
+    # multiplier_level = [1, 2, 3, 4, 5] # track1
     if scale < len(multiplier_level):
         multiplier = multiplier_level[scale]
     else:
@@ -1417,6 +1426,7 @@ def static_rain_filter(scale, image, rain_overlay):
     Returns: numpy array:
     """
     intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    # intensity_level = [1, 2, 3, 4, 5] # track1
     if scale < len(intensity_level):
         intensity = intensity_level[scale]
     else:
@@ -1500,7 +1510,7 @@ def dynamic_object_overlay(scale, image, iterator):
 
     Returns: numpy array:
     """
-    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    intensity_level = [10, 15, 20, 30, 40]
     if scale < len(intensity_level):
         intensity = intensity_level[scale]
     else:
@@ -1535,7 +1545,9 @@ def static_object_overlay(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    # intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    intensity_level = [10, 15, 20, 40, 60]
+
     if scale < len(intensity_level):
         intensity = intensity_level[scale]
     else:
@@ -1672,7 +1684,9 @@ def static_lightning_filter(scale, image, rain_overlay):
 
     Returns: numpy array:
     """
-    intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    # intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    intensity_level = [10, 15, 20, 40, 60]
+
     if scale < len(intensity_level):
         intensity = intensity_level[scale]
     else:
@@ -1741,6 +1755,7 @@ def static_smoke_filter(scale, image, rain_overlay):
     Returns: numpy array:
     """
     intensity_level = [0.15, 0.25, 0.4, 0.6, 0.85]
+    # intensity_level = [1, 2, 3, 4, 5] # track1
     if scale < len(intensity_level):
         intensity = intensity_level[scale]
     else:

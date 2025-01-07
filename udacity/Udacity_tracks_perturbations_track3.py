@@ -7,44 +7,33 @@ import cv2
 import eventlet
 eventlet.monkey_patch()
 # ensure compatibility
-
 import os
 import sys
+
+project_root = os.path.dirname("/home/jiaqq/Project-1120/PerturbationDrive")
+sys.path.append(project_root)
+
 import time
 import numpy as np
 from PIL import Image
 from udacity.perturbation.imageperturbations import ImagePerturbation
-from udacity.utils import perturb_driving_log
+from udacity.utils import *
 from perturbationdrive import ImageCallBack
 from udacity.ase_simulation.agent import SupervisedAgent
 from udacity.ase_simulation.gym import UdacityGym
 from udacity.ase_simulation.simulator import UdacitySimulator
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(project_root)
-
 def create_perturb_list(perturbation_functions, image_size):
     return ImagePerturbation(funcs=perturbation_functions, attention_map={}, image_size=image_size)
 
-def save_image(image_path, image):
-    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(image_path, image_bgr)
-    # print("Path is : "+image_path)
-    # if isinstance(image, np.ndarray):
-    #     image = Image.fromarray(image)
-    #
-    # if not isinstance(image, Image.Image):
-    #     raise ValueError("Image is not a valid PIL.Image object!")
-    #
-    # image.save(image_path)
 
 if __name__ == '__main__':
     SIMULATOR_PATH = "./udacity/udacity_sim_tracks/udacity.x86_64"
     HOST, PORT = "127.0.0.1", 4567
 
-    TRACK = "lake"
+    TRACK = "mountain"
     DAYTIME, WEATHER = "day", "sunny"
-    MODEL_NAME = "track1-steer-throttle.h5"
+    MODEL_NAME = "track3-steer-throttle.h5"
 
     # MODEL_NAME = "track1_change_dropout_rate_mutated_1.0_layer4.h5"
     MODEL_PATH = os.path.join("./checkpoints", MODEL_NAME)
@@ -56,15 +45,21 @@ if __name__ == '__main__':
     IMAGE_SIZE = (160, 320) #Perturbated Image Size, normal same as input size
     # "gaussian_noise", "poisson_noise", "zoom_blur", "contrast" no fitable value
     # "elastic", all perfect drive, need to increase?"white_balance_filter", "reflection_filter"
-    # PERTURBATIONS = ["false_color_filter"] #, "defocus_blur", "impulse_noise", "motion_blur"]
-    PERTURBATIONS = ["reflection_filter", "white_balance_filter", "sharpen_filter", "grayscale_filter"]# "fog_mapping", "splatter_mapping"
+    # PERTURBATIONS = ["object_overlay","dynamic_object_overlay", "dynamic_sun_filter", "dynamic_lightning_filter", "dynamic_smoke_filter"]
+    # PERTURBATIONS = ["perturb_high_attention_regions", "perturb_highest_n_attention_regions", "perturb_lowest_n_attention_regions", "perturb_random_n_attention_regions", "effects_attention_regions"]
+    # PERTURBATIONS = ["contrast", "zigzag_mapping", "canny_edges_mapping", "speckle_noise_filter", "speckle_noise_filter", "dynamic_object_overlay", "static_lightning_filter", "static_object_overlay"]
+    # PERTURBATIONS = ["posterize_filter", "cutout_filter", "sample_pairing_filter", "gaussian_blur", "saturation_filter", "saturation_decrease_filter"]# "fog_mapping", "splatter_mapping"
+
+    # Start from track3
+    PERTURBATIONS = ["impulse_noise", "defocus_blur", "glass_blur", "motion_blur", "increase_brightness", "pixelate", "jpeg_filter", "shear_image", "translate_image", "scale_image", "rotate_image"]
+
     SCALE = 6 # scale from 0 to 4
     LOW_SPEED_THRESHOLD = 0.01
     LOW_SPEED_LIMIT = 20
     # 3-5
-    TOTAL_CRASH_LIMIT = (3,6) if TRACK == "lake" else (3,8) if TRACK == "mountain" else (1,4)
+    TOTAL_CRASH_LIMIT = (3,6) # if TRACK == "lake" else (3,8) if TRACK == "mountain" else (1,4)
 
-    visualize = True
+    visualize = False
     perturb = True
     image_perturbation = create_perturb_list(PERTURBATIONS, IMAGE_SIZE)
 
@@ -92,7 +87,7 @@ if __name__ == '__main__':
 
             # LOG_PATH here should be ABSOLUTE, info is required in csv log file
             LOG_NAME = f"{TRACK}_{perturbation}_scale{scale}_log.csv"
-            LOG_PATH = f"/home/jiaqq/Project-1120/PerturbationDrive/udacity/perturb_logs/{TRACK}_{perturbation}_scale{scale}_log"
+            LOG_PATH = f"/home/jiaqq/Project-1120/PerturbationDrive/udacity/perturb_logs/{TRACK}/{TRACK}_{perturbation}_scale{scale}_log"
 
             image_folder = os.path.join(LOG_PATH, "image_logs")
 
@@ -235,6 +230,7 @@ if __name__ == '__main__':
 
             data.clear()
             temporary_images.clear()
+            time.sleep(2)
             print("Data has been cleared!")
 
             scale += 1

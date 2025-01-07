@@ -1,8 +1,11 @@
 # used modules from perturbation drive
+from PIL import Image
 from numpy import ndarray, uint8
 import matplotlib.patches as patches
 import os
 import tensorflow as tf
+from tensorflow.python.eager.profiler_client import monitor
+
 #import cvxpy as cp
 from perturbationdrive import (
     PerturbationSimulator,
@@ -212,9 +215,11 @@ class UdacitySimulator(PerturbationSimulator):
         perturbation_controller: Union[ImagePerturbation,None],
         image_size: Tuple[float, float] = (160, 320),
         perturb=False,
+        visualize=False,
         model_drive=False,
         weather="Sun",
-        intensity=90
+        intensity=90,
+        image_folder="images"
     ) -> bool:
         try:
             waypoints = scenario.waypoints
@@ -222,8 +227,11 @@ class UdacitySimulator(PerturbationSimulator):
             width = image_size[1]
             perturbation_function_string = scenario.perturbation_function
             perturbation_scale = scenario.perturbation_scale
-            monitor = ImageCallBack(rows = int(height), cols = int(width))
-            monitor.display_waiting_screen()
+            if visualize:
+                monitor = ImageCallBack(rows = int(height), cols = int(width))
+                monitor.display_waiting_screen()
+            else:
+                monitor = None
             self.logger.info(f"{5 * '-'} Starting udacity scenario {5 * '_'}")
 
             # set up params for saving data
@@ -232,6 +240,7 @@ class UdacitySimulator(PerturbationSimulator):
             isSuccess = False
             done = False
             timeout = False
+            temporary_images = []
 
             # reset the scene to match the scenario
             self.client.weather(weather,intensity)
@@ -264,6 +273,8 @@ class UdacitySimulator(PerturbationSimulator):
                     obs = cv2.resize(obs, (width, height), cv2.INTER_NEAREST)
                 original_image_list.append(obs)
 
+                image_path = os.path.join(image_folder, f"{counter}.png")
+
                 if perturb:
                     # perturb the image
                     perturbed_image = perturbation_controller.perturbation(
@@ -272,6 +283,18 @@ class UdacitySimulator(PerturbationSimulator):
                     image=perturbed_image
                 else:
                     image=obs
+
+                try:
+                    image = Image.fromarray(image)
+                except Exception as e:
+                    # print(f"While saving images in buffer: {e}")
+                    if image.dtype != np.uint8:
+                        image = (image * 255).clip(0, 255).astype(np.uint8)
+
+                    if image.shape != (height, width, 3):
+                        image = np.resize(image, (height, width, 3))
+                image = np.array(image)
+                temporary_images.append((image_path, image))
 
                 rotation=info["orientation_euler"]
 
@@ -296,8 +319,10 @@ class UdacitySimulator(PerturbationSimulator):
                 data.append({
                     'index': counter,
                     'track': "Road_Generator",
+                    'model': "roadGen_trained.h5",
                     'perturb_name': perturbation_function_string,
                     'scale': perturbation_scale,
+                    'image_path': image_path,
                     'speed': info['speed'],
                     'steer': steering,
                     'throttle': throttle,
@@ -305,7 +330,7 @@ class UdacitySimulator(PerturbationSimulator):
                     # 'out_of_track': crash.get("out_of_track"),
                     # 'collision': crash.get("collision"),
                     # 'low_speed': crash.get("low_speed"),
-                    'is_crashed': not done
+                    'is_crashed': done
                 })
 
                 # agent makes a move, the agent also selects the dtype and adds a batch dimension
@@ -319,12 +344,13 @@ class UdacitySimulator(PerturbationSimulator):
                         self.client.action_space.high,
                     )
                 # if self.show_image_cb:
-                monitor.display_img(
-                    image,
-                    f"{actions[0][0]}",
-                    f"{actions[0][1]}",
-                    perturbation_function_string,
-                )
+                if monitor is not None:
+                    monitor.display_img(
+                        image,
+                        f"{actions[0][0]}",
+                        f"{actions[0][1]}",
+                        perturbation_function_string,
+                    )
                 # obs is the image, info contains the road and the position of the car
                 obs, done, info = self.client.step(actions)
 
@@ -337,23 +363,28 @@ class UdacitySimulator(PerturbationSimulator):
             isSuccess = max([abs(xte) for xte in xte_list]) < self.max_xte
             if timeout:
                 isSuccess=False
+
+            if not isSuccess:
+                temporary_images.pop()
+
             self.logger.info(
                 f"{5 * '-'} Finished udacity scenario: {isSuccess} {5 * '_'}"
             )
-            monitor.display_disconnect_screen()
-            monitor.destroy()
+            if monitor is not None:
+                monitor.display_disconnect_screen()
+                monitor.destroy()
 
-            log_name = f"RoadGen_{perturbation_function_string}_intense{perturbation_scale}_log.csv"
-            log_path = os.path.join("./udacity/perturb_logs", log_name)
+            # log_name = f"RoadGen_{perturbation_function_string}_intense{perturbation_scale}_log.csv"
+            # log_path = os.path.join("./udacity/perturb_logs", log_name)
 
-            # store in log only when ADS drives a not short way but crashed before the end
-            if data and data[-1]['index'] > 400 and isSuccess==False:
-                perturb_driving_log(os.path.join(log_path,log_name), data)
+            # # store in log only when ADS drives a not short way but crashed before the end
+            # if data and data[-1]['index'] > 400 and isSuccess==False:
+            #     perturb_driving_log(os.path.join(log_path,log_name), data)
 
             # reset for the new track
             _ = self.client.reset(skip_generation=False, track_string=waypoints)
 
-            return isSuccess
+            return isSuccess, temporary_images, data
 
         except Exception as e:
             # close the simulator

@@ -1,8 +1,13 @@
+from concurrent.futures import ThreadPoolExecutor
+
+from tensorflow.python.eager.profiler_client import monitor
+
 from perturbationdrive.Simulator.Simulator import PerturbationSimulator
 from perturbationdrive.AutomatedDrivingSystem.ADS import ADS
 from perturbationdrive.imageperturbations import ImagePerturbation, get_functions_from_module
 from perturbationdrive.Simulator.Scenario import Scenario, ScenarioOutcome, OfflineScenarioOutcome
 from perturbationdrive.RoadGenerator.RoadGenerator import RoadGenerator
+from udacity.utils import *
 from perturbationdrive.utils.logger import ScenarioOutcomeWriter, OfflineScenarioOutcomeWriter
 
 from typing import List, Union, Dict, Tuple
@@ -41,12 +46,15 @@ class PerturbationDrive:
             self,
             perturbation_functions: List[str],
             attention_map: Dict = {},
+            road_number: int = 0,
             road_generator: Union[RoadGenerator, None] = None,
             road_angles: List[int] = None,
             road_segments: List[int] = None,
             image_size: Tuple[float, float] = (160, 320),
             test_model: bool = False,
             perturb: bool = False,
+            monitor: bool = False,
+            scale_limit: int = 4,
             weather: Union[str, None] = "Sun",
             weather_intensity: Union[int, None] = 90
     ):
@@ -66,19 +74,10 @@ class PerturbationDrive:
             image_perturbation = None
 
         scale = 0
-        index = 0
         perturbations: List[str] = []
-        lack_perturb_scale = []
-        is_crashed = False
 
         if perturb:
             perturbations: List[str] = copy.deepcopy(perturbation_functions)
-            # populate all perturbations
-            if len(perturbations) == 0:
-                perturbation_fns = get_functions_from_module(
-                    "perturbationdrive.perturbationfuncs"
-                )
-                perturbations = list(map(lambda f: f.__name__, perturbation_fns))
 
         # we append the empty perturbation here
         # perturbations.append("")
@@ -97,9 +96,9 @@ class PerturbationDrive:
 
         # grid search loop
         while True:
-            perturbation = perturbations[index]
+            perturbation = perturbations[0]
             print(
-                f"{5 * '-'} Running Scenario: Perturbation {perturbation} on {scale} {5 * '-'}"
+                f"{5 * '-'} Running Scenario: Perturbation {perturbation} on scale: {scale} {5 * '-'}"
             )
 
             scenario = Scenario(
@@ -108,41 +107,59 @@ class PerturbationDrive:
                 perturbation_scale=scale,
             )
 
+            LOG_NAME = f"roadGen_{perturbation}_road{road_number}_scale{scale}_log.csv"
+            LOG_PATH = f"/home/jiaqq/Project-1120/PerturbationDrive/udacity/perturb_logs/roadGen/{perturbation}/roadGen_{perturbation}_road{road_number}_scale{scale}_log"
+            image_folder = os.path.join(LOG_PATH, "image_logs")
+
             # simulate the scenario
-            isSuccess = self.simulator.simulate_scanario(
-                self.ads, scenario=scenario, perturbation_controller=image_perturbation, perturb=perturb,
-                model_drive=test_model, weather=weather, intensity=weather_intensity
+            isSuccess, temporary_images, data = self.simulator.simulate_scanario(
+                self.ads, scenario=scenario, perturbation_controller=image_perturbation, perturb=perturb, visualize=monitor,
+                model_drive=test_model, weather=weather, intensity=weather_intensity, image_folder = image_folder
             )
-
-            if not isSuccess:
-                is_crashed = True
-
-            # check if we drop the scenario, we never remove the empty perturbation
-            # for comparison reasons
-            # print("outcome.isSuccess is: ", outcome.isSuccess)
-            # if not outcome.isSuccess or perturb==False:
-            if perturb == False:
-                perturbations.remove(perturbation)
-            else:
-                index += 1
 
             if len(perturbations) == 0:
                 # all perturbations resulted in failures
                 # we will still have one perturbation here because we never
                 # drop the empty perturbation
                 break
-            if index == len(perturbations):
-                # we increment the scale, so start with the first perturbation again
-                index = 0
+
+            if isSuccess: # no crashed in this turn, so iterate into the next scale_level
+                print(f"No crash in current scale: {scale}, increasing scale.")
                 scale += 1
 
-            if scale > 4:
-                # we went through all scales
-                break
+            else:
+                if len(temporary_images) > 50:# crash happens in current scale, record the image and data, jump out to the next perturbation
+                    if not os.path.exists(image_folder):
+                        os.makedirs(image_folder)
+                    with ThreadPoolExecutor(max_workers=4) as executor:
+                        futures = [executor.submit(save_image, image_path, image) for image_path, image in temporary_images]
+                    # 等待所有任务完成
+                    for future in futures:
+                        try:
+                            future.result()  # 检查任务状态
+                        except Exception as e:
+                            print(f"Error during image saving: {e}")
 
-        if not is_crashed: # isSuccess: no crash from all perturbation
-            lack_perturb_scale.append(perturbation)
-            print("For those types that do not have sufficient perturbation effects: ", lack_perturb_scale)
+                    perturb_driving_log(os.path.join(LOG_PATH, LOG_NAME), data)
+                    print(f"Data saved under {LOG_NAME}!")
+
+                else:
+                    print("Driving performance bad, too short! Data is not saving!")
+
+                scale = 0
+                perturbations.remove(perturbation)
+                if len(perturbations) == 0:
+                    break
+                data.clear()
+                futures.clear()
+                temporary_images.clear()
+                time.sleep(2)
+                print("Data has been cleared!")
+
+            if scale > scale_limit:
+                # we went through all scales
+                print("Drives perfect in all scales! Going into the next perturbation!")
+                break
 
         # TODO: print command line summary of benchmarking process
         del image_perturbation
